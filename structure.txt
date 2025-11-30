@@ -1,0 +1,24 @@
+project/
+├── app.py # App init, registers all pages, sets up navbar, shared callbacks (e.g., theme switch, error modal)
+├── pages/ # Feature folders for multi-page registration
+│ ├── home/
+│ │ ├── **init**.py # Registers page: dash.register_page(**name**, path='/', layout=layout)
+│ │ ├── layout.py # home_layout function
+│ │ └── callbacks.py # Home-specific callbacks (import and register here)
+│ ├── optumgx/
+│ │ ├── **init**.py # dash.register_page(**name**, path='/optumgx', layout=layout)
+│ │ ├── layout.py # optumgx_layout
+│ │ └── callbacks.py # Optumgx callbacks
+│ ├── groundhog/ # Similar structure
+│ ├── gempy/ # Similar
+│ ├── pyoma2/ # Similar
+│ ├── iframe/ # Similar (path='/3d-viewer')
+│ ├── openseespy/ # Stub (path='/openseespy')
+│ ├── preprocessing/ # Stub
+│ └── tracker/ # Stub
+├── common/
+│ ├── utils.py # Shared functions (e.g., load_sensor_data, simulate_optumgx)
+│ ├── navbar.py # create_navbar (update to use dcc.Link for page paths)
+│ └── constants.py # PROJECT_DIR, data init
+├── assets/
+└── data/

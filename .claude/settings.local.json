@@ -1,0 +1,23 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(dir:*)",
+      "Bash(pip show:*)",
+      "Bash(python:*)",
+      "Bash(.venvScriptspython.exe:*)",
+      "Bash(\".venv/Scripts/python.exe\":*)",
+      "Bash(\".venv/Scripts/python.exe\" -c \"import pandas as pd; df = pd.read_excel(''Data/excel_example_layering.xlsx''); print(''Columns:'', list(df.columns)); print(''\\nFirst 10 rows:''); print(df.head(10)); print(''\\nData types:''); print(df.dtypes); print(''\\nShape:'', df.shape)\")",
+      "Bash(\".venv/Scripts/python.exe\" test_groundhog_fixes.py)",
+      "Bash(copy:*)",
+      "Bash(\".venv/Scripts/python.exe\" debug_gempy_pyoma2.py)",
+      "Bash(\".venv/Scripts/python.exe\" -c \"import pyoma2; print(dir(pyoma2))\")",
+      "Bash(\".venv/Scripts/python.exe\" -c \"import pyoma2.support; print(dir(pyoma2.support))\")",
+      "Bash(\".venv/Scripts/python.exe\" -m pytest tests/test_groundhog_integration.py -v --tb=short)",
+      "Bash(git init:*)",
+      "Bash(git config:*)",
+      "Bash(git add:*)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

@@ -1,0 +1,278 @@
+from groundhog.siteinvestigation.insitutests.pcpt_processing import PCPTProcessing
+from groundhog.general.soilprofile import SoilProfile
+from groundhog.siteinvestigation.insitutests.pcpt_processing import DEFAULT_CONE_PROPERTIES
+from groundhog.siteinvestigation.insitutests.pcpt_processing import CORRELATIONS
+from groundhog.general.plotting import LogPlot
+import numpy as np
+import pandas as pd 
+from groundhog.general import soilprofile as sp
+from groundhog.general.soilprofile import read_excel
+from groundhog.general.plotting import LogPlotMatplotlib
+
+# A dataframe is be created from Excel data and added as the .data attribute of the PCPTProcessing object.
+pcpt = PCPTProcessing(title="Example PCPT Excel")
+
+# load Excel data
+pcpt.load_excel(path="Data/excel_example.xlsx",
+    u2_key="u [kPa]", u2_multiplier=0.001) # convert kPa to MPa
+pcpt.data.head() #pcpt.data.tail()
+
+# plot raw PCPT data
+pcpt.plot_raw_pcpt()
+
+# Set cone properties
+print(DEFAULT_CONE_PROPERTIES)
+layering = SoilProfile({
+    "Depth from [m]": [0, 3.16, 5.9, 14.86, 15.7],
+    "Depth to [m]": [3.16, 5.9, 14.86, 15.7, 20],
+    "Total unit weight [kN/m3]": [18, 17, 19.5, 20, 20],
+    'Soil type': ['SAND', 'CLAY', 'SAND', 'SAND', 'SAND']
+})
+layering.to_excel("Data/excel_example_layering.xlsx")
+
+pcpt.map_properties(layer_profile=layering, cone_profile=DEFAULT_CONE_PROPERTIES)
+pcpt.plot_raw_pcpt()
+
+# Soil profile
+profile_1 = sp.read_excel("Data/soilprofile_basic.xlsx")
+profile_1
+profile_1.calculate_overburden()
+profile_1[['Depth from [m]', 'Depth to [m]',
+           'Vertical effective stress from [kPa]', 'Vertical effective stress to [kPa]',
+           'Vertical total stress from [kPa]', 'Vertical total stress to [kPa]']]
+profile_2 = sp.SoilProfile({
+    'Depth from [m]': [0, 1, 3, 4],
+    'Depth to [m]': [1, 3, 4, 10],
+    'Soil type': ['SAND', 'CLAY', 'SILT', 'SAND'],
+    'Relative density': ['Loose', None, 'Medium dense', 'Dense'],
+    'qc from [MPa]': [3, 1, 4, 40],
+    'qc to [MPa]': [4, 1.5, 8, 50],
+    'qt [MPa]': [3.5, 1.25, 6, 45],
+    'Total unit weight [kN/m3]': [19, 18, 19, 20]
+})
+logplot = LogPlot(profile_2, no_panels=2, fillcolordict={'SAND': 'yellow', 'CLAY': 'brown', 'SILT': 'green'})
+logplot.add_soilparameter_trace(
+    parametername="Total unit weight [kN/m3]",
+    panel_no=1)
+logplot.add_soilparameter_trace(
+    parametername="qc [MPa]",
+    panel_no=2)
+logplot.add_soilparameter_trace(
+    parametername="qt [MPa]",
+    panel_no=2)
+logplot.set_xaxis(title='Total unit weight [kN/m3]', panel_no=1, range=(15, 23))
+logplot.set_xaxis(title='qc, qt [MPa]', panel_no=2)
+logplot.set_zaxis(title='z [m]', range=(10, 0))
+logplot.set_size(width=900, height=600)
+logplot.show()
+
+
+sp = read_excel('Data/bh_log.xlsx')
+sp
+
+
+
+
+# Normalize
+pcpt.normalise_pcpt()
+pcpt.plot_normalised_pcpt()
+pcpt.plot_robertson_chart()
+
+# Correlations
+list(CORRELATIONS.keys())
+#  Here, we will apply the correlation of Mayne & Rix to clay and Rix & Stokoe to sand.
+pcpt.apply_correlation('Ic Robertson and Wride (1998)', outputs={'Ic [-]':'Ic [-]'})
+pcpt.apply_correlation(
+    'Gmax Rix and Stokoe (1991)', outputs={'Gmax [kPa]': 'Gmax sand [kPa]'},
+    apply_for_soiltypes=['SAND',])
+pcpt.apply_correlation(
+    'Gmax Mayne and Rix (1993)', outputs={'Gmax [kPa]': 'Gmax clay [kPa]'},
+    apply_for_soiltypes=['CLAY',])
+
+# The calculated properties can be visualized with a LogPlot. The keys to be plotted in each panel need to be provided in the add_trace method. 
+# In the example below, the first panel only contain qc, second Ic, third Gmax for sand and clay.
+cpt_processed_plot = LogPlot(layering, no_panels=3, fillcolordict={'SAND': 'yellow', 'CLAY': 'brown'})
+cpt_processed_plot.add_trace(
+    x=pcpt.data['qc [MPa]'],
+    z=pcpt.data['z [m]'],
+    name='qc',
+    showlegend=False,
+    panel_no=1)
+cpt_processed_plot.add_trace(
+    x=pcpt.data['Ic [-]'],
+    z=pcpt.data['z [m]'],
+    name='Ic',
+    showlegend=False,
+    panel_no=2)
+cpt_processed_plot.add_trace(
+    x=pcpt.data['Gmax sand [kPa]'],
+    z=pcpt.data['z [m]'],
+    name='Gmax SAND',
+    showlegend=True,
+    panel_no=3)
+cpt_processed_plot.add_trace(
+    x=pcpt.data['Gmax clay [kPa]'],
+    z=pcpt.data['z [m]'],
+    name='Gmax CLAY',
+    showlegend=True,
+    panel_no=3)
+cpt_processed_plot.set_xaxis(title=r'$ q_c \ \text{[MPa]} $', panel_no=1)
+cpt_processed_plot.set_xaxis(title=r'$ I_c \ \text{[-]} $', panel_no=2, range=(1, 3.5))
+cpt_processed_plot.set_xaxis(title=r'$ G_{max} \ \text{[kPa]} $', panel_no=3, range=(0, 200e3))
+cpt_processed_plot.set_zaxis(title=r'$ z \ \text{[m]} $', range=(20, 0))
+cpt_processed_plot.show()
+
+
+## example 2
+
+
+
+# hand calc
+
+su_handtools_results = pd.read_excel('Data/su_handtools_1.xlsx')
+su_handtools_results.head()
+su_cu_results = pd.read_excel('Data/cu_1.xlsx')
+su_cu_results.head()
+su_uu_results = pd.read_excel('Data/uu_1.xlsx')
+su_uu_results.head()
+su_dss_results = pd.read_excel('Data/dss_cv_1.xlsx')
+su_dss_results.head()
+
+pcpt = PCPTProcessing('CPT')
+pcpt.load_excel('Data/cpt.xlsx')
+pcpt.plot_raw_pcpt(latex_titles=False)
+cpt_su = pcpt.data[
+    (pcpt.data['z [m]'] >= 8.2) & 
+    (pcpt.data['z [m]'] <= 49)][['z [m]', 'Su [kPa]']].reset_index(drop=True)
+cpt_su.head()
+
+logplot = LogPlotMatplotlib(
+   soilprofile=sp,
+   no_panels=1,
+   fillcolordict={'SAND': 'yellow', 'CLAY': 'brown', 'SAND/CLAY': 'orange'})
+logplot.add_trace(
+    x=su_handtools_results['Su [kPa]'],
+    z=su_handtools_results['Depth [m]'], name='Handtools', panel_no=1, line=False, showlegend=True)
+logplot.add_trace(
+    x=su_cu_results['Su peak q [kPa]'],
+    z=su_cu_results['Depth [m]'], name='CU', panel_no=1, line=False, showlegend=True)
+logplot.add_trace(
+    x=su_uu_results['Su peak [kPa]'],
+    z=su_uu_results['Depth [m]'], name='UU', panel_no=1, line=False, showlegend=True)
+logplot.add_trace(
+    x=su_dss_results['Failure shear stress [kPa]'],
+    z=su_dss_results['Depth [m]'], name='DSS', panel_no=1, line=False, showlegend=True)
+logplot.add_trace(
+    x=cpt_su['Su [kPa]'],
+    z=cpt_su['z [m]'], name='From CPT', panel_no=1, showlegend=True)
+
+logplot.set_xaxis_title(title='$ S_u $ [kPa]', panel_no=1, size=15)
+logplot.set_zaxis_title(title='$ z $ [m]')
+logplot.set_xaxis_range(min_value=0, max_value=350, panel_no=1)
+logplot.set_zaxis_range(min_depth=0, max_depth=50)
+logplot.show()
+
+
+
+
+# automatic selection
+
+
+sp.selection_soilparameter(
+    parameter='Su [kPa]',
+    depths=cpt_su['z [m]'],
+    values=cpt_su['Su [kPa]'])
+
+logplot = LogPlotMatplotlib(
+   soilprofile=sp,
+   no_panels=1,
+   fillcolordict={'SAND': 'yellow', 'CLAY': 'brown', 'SAND/CLAY': 'orange'})
+logplot.add_trace(
+    x=su_handtools_results['Su [kPa]'],
+    z=su_handtools_results['Depth [m]'], name='Handtools', panel_no=1, line=False, showlegend=True)
+logplot.add_trace(
+    x=su_cu_results['Su peak q [kPa]'],
+    z=su_cu_results['Depth [m]'], name='CU', panel_no=1, line=False, showlegend=True)
+logplot.add_trace(
+    x=su_uu_results['Su peak [kPa]'],
+    z=su_uu_results['Depth [m]'], name='UU', panel_no=1, line=False, showlegend=True)
+logplot.add_trace(
+    x=su_dss_results['Failure shear stress [kPa]'],
+    z=su_dss_results['Depth [m]'], name='DSS', panel_no=1, line=False, showlegend=True)
+logplot.add_trace(
+    x=cpt_su['Su [kPa]'],
+    z=cpt_su['z [m]'], name='From CPT', panel_no=1, showlegend=True)
+logplot.add_soilparameter_trace(parametername='Su [kPa]', panel_no=1, ls='--')
+logplot.set_xaxis_title(title='$ S_u $ [kPa]', panel_no=1, size=15)
+logplot.set_zaxis_title(title='$ z $ [m]')
+logplot.set_xaxis_range(min_value=0, max_value=350, panel_no=1)
+logplot.set_zaxis_range(min_depth=0, max_depth=50)
+logplot.show()
+
+# Linearly varying
+sp.selection_soilparameter(
+    parameter='Su [kPa]',
+    depths=cpt_su['z [m]'],
+    values=cpt_su['Su [kPa]'],
+    linearvariation=True)
+
+logplot = LogPlotMatplotlib(
+   soilprofile=sp,
+   no_panels=1,
+   fillcolordict={'SAND': 'yellow', 'CLAY': 'brown', 'SAND/CLAY': 'orange'})
+logplot.add_trace(
+    x=su_handtools_results['Su [kPa]'],
+    z=su_handtools_results['Depth [m]'], name='Handtools', panel_no=1, line=False, showlegend=True)
+logplot.add_trace(
+    x=su_cu_results['Su peak q [kPa]'],
+    z=su_cu_results['Depth [m]'], name='CU', panel_no=1, line=False, showlegend=True)
+logplot.add_trace(
+    x=su_uu_results['Su peak [kPa]'],
+    z=su_uu_results['Depth [m]'], name='UU', panel_no=1, line=False, showlegend=True)
+logplot.add_trace(
+    x=su_dss_results['Failure shear stress [kPa]'],
+    z=su_dss_results['Depth [m]'], name='DSS', panel_no=1, line=False, showlegend=True)
+logplot.add_trace(
+    x=cpt_su['Su [kPa]'],
+    z=cpt_su['z [m]'], name='From CPT', panel_no=1, showlegend=True)
+logplot.add_soilparameter_trace(parametername='Su [kPa]', panel_no=1, ls='--')
+logplot.set_xaxis_title(title='$ S_u $ [kPa]', panel_no=1, size=15)
+logplot.set_zaxis_title(title='$ z $ [m]')
+logplot.set_xaxis_range(min_value=0, max_value=350, panel_no=1)
+logplot.set_zaxis_range(min_depth=0, max_depth=50)
+logplot.show()
+
+
+# constant min
+
+sp.selection_soilparameter(
+    parameter='Su [kPa]',
+    depths=cpt_su['z [m]'],
+    values=cpt_su['Su [kPa]'],
+    rule='min')
+
+logplot = LogPlotMatplotlib(
+   soilprofile=sp,
+   no_panels=1,
+   fillcolordict={'SAND': 'yellow', 'CLAY': 'brown', 'SAND/CLAY': 'orange'})
+logplot.add_trace(
+    x=su_handtools_results['Su [kPa]'],
+    z=su_handtools_results['Depth [m]'], name='Handtools', panel_no=1, line=False, showlegend=True)
+logplot.add_trace(
+    x=su_cu_results['Su peak q [kPa]'],
+    z=su_cu_results['Depth [m]'], name='CU', panel_no=1, line=False, showlegend=True)
+logplot.add_trace(
+    x=su_uu_results['Su peak [kPa]'],
+    z=su_uu_results['Depth [m]'], name='UU', panel_no=1, line=False, showlegend=True)
+logplot.add_trace(
+    x=su_dss_results['Failure shear stress [kPa]'],
+    z=su_dss_results['Depth [m]'], name='DSS', panel_no=1, line=False, showlegend=True)
+logplot.add_trace(
+    x=cpt_su['Su [kPa]'],
+    z=cpt_su['z [m]'], name='From CPT', panel_no=1, showlegend=True)
+logplot.add_soilparameter_trace(parametername='Su [kPa]', panel_no=1, ls='--')
+logplot.set_xaxis_title(title='$ S_u $ [kPa]', panel_no=1, size=15)
+logplot.set_zaxis_title(title='$ z $ [m]')
+logplot.set_xaxis_range(min_value=0, max_value=350, panel_no=1)
+logplot.set_zaxis_range(min_depth=0, max_depth=50)
+logplot.show()

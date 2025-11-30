@@ -1,0 +1,61 @@
+import gempy as gp
+import gempy_viewer as gpv
+import pyvista as pv
+import vtk
+import pandas as pd
+
+# sphinx_gallery_thumbnail_number = 2
+################################################
+# Generate the Geological Model
+# Create a GeoModel instance with the given project name, extent, and refinement level.
+
+data = gp.create_geomodel(
+    project_name='horizontal',
+    extent=[0, 1000, 0, 1000, 0, 1000],
+    refinement=6,
+    importer_helper=gp.data.ImporterHelper(
+        path_to_orientations=  "C:/Users/qervf/Desktop/PhD_Thesis/code/python_scripts/SNUGeoSHM/Data/model1_orientations.csv",
+        path_to_surface_points= "C:/Users/qervf/Desktop/PhD_Thesis/code/python_scripts/SNUGeoSHM/Data/model1_surface_points.csv"
+    )
+)
+
+# Map a geological series to the corresponding surfaces.
+# Here, the "Strat_Series" is associated with two formations ('rock2' and 'rock1'),
+# which defines the stacking order of horizontal layers.
+gp.map_stack_to_surfaces(
+    gempy_model=data,
+    mapping_object={"Strat_Series": ('CLAY', 'SAND')}
+)
+
+# Compute the geological model using the provided data and mappings.
+gp.compute_model(data)
+geo_data = data
+
+################################################
+# 2D Visualization of the Geological Model
+
+# Plot the initial model in the y direction (without displaying computed results)
+gpv.plot_2d(geo_data, direction=['y'], show_results=False)
+
+# Plot the computed model results in the x and y directions, including data but excluding boundaries
+gpv.plot_2d(geo_data, direction=['x'], show_data=True, show_boundaries=False)
+gpv.plot_2d(geo_data, direction=['y'], show_data=True, show_boundaries=False)
+
+
+p = gpv.plot_3d(geo_data, show_data=True, show_results=True, show_boundaries=True, image=True)
+
+# Export different components of the model to VTK files:
+p.surface_poly['SAND'].save('SAND.vtk')  # Save formation 'SAND'
+p.surface_poly['CLAY'].save('CLAY.vtk')  # Save formation 'CLAY'
+p.orientations_mesh.save('orientations.vtk')  # Save the orientations mesh
+p.surface_points_mesh.save('surface_points.vtk')  # Save the surface points mesh
+
+# Retrieve and export the regular grid (volume representation) of the model
+box = p.regular_grid_actor.GetMapper().GetInput()
+box.save('box.vtk')
+
+pv.read('SAND.vtk').plot(show_edges=False)
+pv.read('CLAY.vtk').plot(show_edges=False)
+pv.read('orientations.vtk').plot(show_edges=False)
+pv.read('surface_points.vtk').plot(show_edges=False)
+pv.read('box.vtk').plot(show_edges=False)

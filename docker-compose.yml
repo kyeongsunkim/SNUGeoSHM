@@ -1,0 +1,119 @@
+version: '3.8'
+
+services:
+  # Main application
+  app:
+    build: .
+    image: snugeoshm:latest
+    container_name: snugeoshm-app
+    ports:
+      - "${PORT:-8050}:8050"
+    environment:
+      # Application
+      - DEBUG=False
+      - HOST=0.0.0.0
+      - PORT=8050
+      - LOG_LEVEL=INFO
+
+      # Security
+      - SECRET_KEY=${SECRET_KEY}
+      - DASH_USERNAME=${DASH_USERNAME}
+      - DASH_PASSWORD=${DASH_PASSWORD}
+
+      # Database (if using PostgreSQL)
+      - DB_TYPE=${DB_TYPE:-file}
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_NAME=${DB_NAME:-snugeoshm}
+      - DB_USER=${DB_USER:-postgres}
+      - DB_PASSWORD=${DB_PASSWORD}
+
+      # Cache (if using Redis)
+      - CACHE_TYPE=${CACHE_TYPE:-simple}
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+    volumes:
+      - ./data:/app/data
+      - ./logs:/app/logs
+      - ./outputs:/app/outputs
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - snugeoshm-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import requests; requests.get('http://localhost:8050', timeout=5)"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # PostgreSQL database
+  postgres:
+    image: postgis/postgis:15-3.3
+    container_name: snugeoshm-postgres
+    environment:
+      - POSTGRES_DB=${DB_NAME:-snugeoshm}
+      - POSTGRES_USER=${DB_USER:-postgres}
+      - POSTGRES_PASSWORD=${DB_PASSWORD}
+      - PGDATA=/var/lib/postgresql/data/pgdata
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./init_db.sql:/docker-entrypoint-initdb.d/init.sql
+    ports:
+      - "5432:5432"
+    networks:
+      - snugeoshm-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-postgres}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Redis cache
+  redis:
+    image: redis:7-alpine
+    container_name: snugeoshm-redis
+    command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD:-}
+    volumes:
+      - redis-data:/data
+    ports:
+      - "6379:6379"
+    networks:
+      - snugeoshm-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Optional: Nginx reverse proxy
+  nginx:
+    image: nginx:alpine
+    container_name: snugeoshm-nginx
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./ssl:/etc/nginx/ssl:ro
+    depends_on:
+      - app
+    networks:
+      - snugeoshm-network
+    restart: unless-stopped
+    profiles:
+      - production
+
+networks:
+  snugeoshm-network:
+    driver: bridge
+
+volumes:
+  postgres-data:
+  redis-data:

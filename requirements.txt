@@ -1,0 +1,10 @@
+dash
+plotly
+dash-bootstrap-components
+pandas
+numpy
+gempy
+dash-leaflet
+pyoma2  # Note: This may require specific installation as per GitHub repo
+scikit-learn
+dash-vtk  # For 3D visualization in dash_wtgviewer_example.py if needed; optional
