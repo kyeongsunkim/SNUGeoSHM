@@ -276,12 +276,12 @@ def run_groundhog(n_clicks, store_data):
             fs_key="fs [kPa]" if "fs [kPa]" in cpt_df.columns else None,
             u2_key="u [kPa]" if "u [kPa]" in cpt_df.columns else None,
         )
-        pcpt.set_position(easting=0, northing=0, elevation=0)
+        
 
         # Initialize SoilProfile from layering data
         layering = SoilProfile(layering_df)  # Assumes columns: 'Depth from [m]', 'Depth to [m]', 'Soil type', etc.
         layering.title = 'Uploaded Profile'
-        layering.set_position(easting=0, northing=0, elevation=0)
+        
 
         color_dict = {
             'SAND': '#ffe300',  # Yellow
@@ -356,7 +356,7 @@ def run_groundhog(n_clicks, store_data):
         # Fence diagram
         profile_fig = plot_fence_diagram(
             profiles=[layering],
-            start='Uploaded Profile', end='Uploaded Profile', band=2000,
+            band=2000,
             fillcolordict=color_dict,
             opacity=0.8, logwidth=250
         )
